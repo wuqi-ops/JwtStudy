@@ -32,6 +32,7 @@ public class AuthenticationController {
     @PostMapping("/login")
     public String createAuthenticationToken(@RequestBody User user) throws Exception {
         try {
+            // 会自动去调用，自定义的MyUserDetailsService（实现UserDetailsService）中的loadUserByUsername方法去查询用户信息做比较，可以DEBUG跟一下
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
             );
