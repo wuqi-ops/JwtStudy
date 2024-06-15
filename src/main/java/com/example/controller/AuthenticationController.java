@@ -6,11 +6,14 @@ import com.example.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,6 +56,7 @@ public class AuthenticationController {
 
     @PostMapping("/doSomething")
     public String doSomething(@RequestBody User user) throws Exception {
+
         System.out.println(user);
 
         // 生成JWT
@@ -63,8 +67,19 @@ public class AuthenticationController {
 
     @PostMapping("/hello")
     public String hello(@RequestBody User user) {
-        User userByUserName = userMapper.findUserByUserName(user.getUsername());
-        System.out.println(userByUserName);
-        return "hello";
+        // JwtRequestFilter过滤器中已经将请求的上下文信息存储到SecurityContextHolder
+        // 所以这里可以直接从SecurityContextHolder中获取到请求的上下文信息，包括认证信息
+        UserDetails userDetails = null;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            userDetails = (UserDetails) authentication.getPrincipal();
+            String username = userDetails.getUsername();
+            Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
+            // 其他用户信息的提取逻辑
+            System.out.println(userDetails);
+        }
+
+        assert userDetails != null;
+        return userDetails.toString();
     }
 }

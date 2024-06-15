@@ -59,6 +59,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                         userDetails, null, userDetails.getAuthorities());
                 usernamePasswordAuthenticationToken
                         .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                // SecurityContextHolder用于存储安全上下文信息，包括认证对象的信息。
+                // 可以使用这种方式获取存储的认证对象信息：Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
             }
         }
