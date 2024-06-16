@@ -2,9 +2,9 @@ package com.example.controller;
 
 import com.example.entity.MyUserDetails;
 import com.example.entity.User;
-import com.example.mapper.UserMapper;
 import com.example.utils.JwtUtil;
 import com.example.utils.RedisTokenUtil;
+import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,11 +15,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @author wuqi
+ */
 @RestController
 public class AuthenticationController {
 
@@ -79,6 +84,19 @@ public class AuthenticationController {
             throw new RuntimeException("userDetails is null");
         }
         return jwt;
+    }
+
+    @GetMapping("/logout2")
+    public String logout(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            String username = jwtUtil.extractUsername(token);
+            Claims claims = jwtUtil.extractAllClaims(token);
+            Long id = claims.get("id", Long.class);
+            redisTokenUtil.deleteUser(String.valueOf(id), username);
+        }
+        return "User logged out successfully.";
     }
 
     @PostMapping("/doSomething")

@@ -34,7 +34,7 @@ public class BcryptUtils {
     }
 
     public static void main(String[] args) {
-        String encrypt = encrypt("wuqi");
+        String encrypt = encrypt("xpt");
         System.out.println(encrypt);
 
         boolean matches = matches("wuqi", encrypt);
