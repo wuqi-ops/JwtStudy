@@ -19,4 +19,10 @@ public class User implements Serializable {
     private String username;
     private String password;
     private String role;
+
+    public User(Long id, String username, String role) {
+        this.id = id;
+        this.username = username;
+        this.role = role;
+    }
 }

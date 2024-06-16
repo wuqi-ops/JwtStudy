@@ -39,7 +39,7 @@ public class AuthenticationController {
     public String createAuthenticationToken(@RequestBody User user) throws Exception {
         try {
             // 会调用自定义的MyUserDetailsService（实现UserDetailsService）中的loadUserByUsername方法去查询用户信息做比较，可以DEBUG跟一下
-            // 调用路径 AuthenticationManager.authenticate() -> ProviderManager.authenticate() -> AuthenticationProvider.authenticate()
+            // 调用路径: AuthenticationManager.authenticate() -> ProviderManager.authenticate() -> AuthenticationProvider.authenticate()
             // ->AbstractUserDetailsAuthenticationProvider.authenticate() -> DaoAuthenticationProvider.loadUserByUsername()
             // ->MyUserDetailsService(自定义的实现类).loadUserByUsername()
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
@@ -51,15 +51,16 @@ public class AuthenticationController {
         final MyUserDetails userDetails = (MyUserDetails) userDetailsService.loadUserByUsername(user.getUsername());
         // 生成JWT
         Map<String, Object> claims = new HashMap<>();
+        String jwt = null;
         // claims是自定义声明（负载），只是为了可以让服务端从jwt中解析出更多信息（减少查询数据库的次数），不传也可以生成jwt
         if (userDetails != null) {
             if (userDetails.getAuthorities() != null) {
                 // 这里遍历权限列表，但只取遍历到到第一个权限值
                 claims.put("role", userDetails.getAuthorities().iterator().next().getAuthority());
             }
-            claims.put("id", user.getId());
+            claims.put("id", userDetails.getId());
 
-            String jwt = jwtUtil.generateToken(userDetails.getUsername(), claims);
+            jwt = jwtUtil.generateToken(userDetails.getUsername(), claims);
             Date expirationDate = jwtUtil.extractExpiration(jwt);
             long expirationTime = expirationDate.getTime() - System.currentTimeMillis();
 
@@ -77,8 +78,7 @@ public class AuthenticationController {
         }else {
             throw new RuntimeException("userDetails is null");
         }
-
-        return userDetails.toString();
+        return jwt;
     }
 
     @PostMapping("/doSomething")

@@ -1,5 +1,7 @@
 package com.example.filter;
 
+import com.example.entity.MyUserDetails;
+import com.example.entity.User;
 import com.example.utils.JwtUtil;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 
 /**
@@ -46,12 +49,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // 从JWT中提取用户角色和权限
+            // 从JWT中提取用户id, 角色和权限
             Claims claims = jwtUtil.extractAllClaims(jwt);
+            Long id = claims.get("id", Long.class);
             String role = claims.get("role", String.class);
-
-            UserDetails userDetails = new org.springframework.security.core.userdetails.User(
-                    username, "", Collections.singletonList(new SimpleGrantedAuthority(role)));
+            MyUserDetails userDetails = new MyUserDetails(new User(id, username, role));
 
             if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
 
