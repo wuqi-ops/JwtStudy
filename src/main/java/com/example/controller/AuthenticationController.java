@@ -1,8 +1,10 @@
 package com.example.controller;
 
+import com.example.entity.MyUserDetails;
 import com.example.entity.User;
 import com.example.mapper.UserMapper;
 import com.example.utils.JwtUtil;
+import com.example.utils.RedisTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,28 +33,52 @@ public class AuthenticationController {
     private UserDetailsService userDetailsService;
 
     @Autowired
-    private UserMapper userMapper;
+    private RedisTokenUtil redisTokenUtil;
 
     @PostMapping("/login")
     public String createAuthenticationToken(@RequestBody User user) throws Exception {
         try {
-            // 会自动去调用，自定义的MyUserDetailsService（实现UserDetailsService）中的loadUserByUsername方法去查询用户信息做比较，可以DEBUG跟一下
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
-            );
+            // 会调用自定义的MyUserDetailsService（实现UserDetailsService）中的loadUserByUsername方法去查询用户信息做比较，可以DEBUG跟一下
+            // 调用路径 AuthenticationManager.authenticate() -> ProviderManager.authenticate() -> AuthenticationProvider.authenticate()
+            // ->AbstractUserDetailsAuthenticationProvider.authenticate() -> DaoAuthenticationProvider.loadUserByUsername()
+            // ->MyUserDetailsService(自定义的实现类).loadUserByUsername()
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
         } catch (AuthenticationException e) {
             throw new Exception("Incorrect username or password", e);
         }
 
-        final UserDetails userDetails = userDetailsService
-                .loadUserByUsername(user.getUsername());
-
+        // 会调用自定义的MyUserDetailsService（实现UserDetailsService）中的loadUserByUsername方法去查询用户信息
+        final MyUserDetails userDetails = (MyUserDetails) userDetailsService.loadUserByUsername(user.getUsername());
         // 生成JWT
         Map<String, Object> claims = new HashMap<>();
-        // 假设所有用户都为admin
-        // claims是自定义声明，只是为了可以让服务端从jwt中解析出更多信息（减少查询数据库的次数），不传也可以生成jwt
-        claims.put("role", "admin");
-        return jwtUtil.generateToken(userDetails.getUsername(), claims);
+        // claims是自定义声明（负载），只是为了可以让服务端从jwt中解析出更多信息（减少查询数据库的次数），不传也可以生成jwt
+        if (userDetails != null) {
+            if (userDetails.getAuthorities() != null) {
+                // 这里遍历权限列表，但只取遍历到到第一个权限值
+                claims.put("role", userDetails.getAuthorities().iterator().next().getAuthority());
+            }
+            claims.put("id", user.getId());
+
+            String jwt = jwtUtil.generateToken(userDetails.getUsername(), claims);
+            Date expirationDate = jwtUtil.extractExpiration(jwt);
+            long expirationTime = expirationDate.getTime() - System.currentTimeMillis();
+
+            // 创建存储到redis中的user对象
+            User userSavedInRedis = new User();
+            userSavedInRedis.setId(userDetails.getId());
+            userSavedInRedis.setUsername(userDetails.getUsername());
+            userSavedInRedis.setPassword(userDetails.getPassword());
+            if (userDetails.getAuthorities() != null) {
+                // 这里遍历权限列表，但只取遍历到到第一个权限值
+                userSavedInRedis.setRole(userDetails.getAuthorities().iterator().next().getAuthority());
+            }
+            // 缓存用户信息并设置过期时间
+            redisTokenUtil.cacheUser(userSavedInRedis, expirationTime);
+        }else {
+            throw new RuntimeException("userDetails is null");
+        }
+
+        return userDetails.toString();
     }
 
     @PostMapping("/doSomething")

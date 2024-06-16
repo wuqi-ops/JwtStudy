@@ -1,5 +1,6 @@
 package com.example.service;
 
+import com.example.entity.MyUserDetails;
 import com.example.entity.User;
 import com.example.mapper.UserMapper;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -31,8 +32,7 @@ public class MyUserDetailsService implements UserDetailsService {
         if (user == null) {
             throw new UsernameNotFoundException("User not found with username: " + username);
         }
-        return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority(user.getRole())));
+        return new MyUserDetails(user);
     }
 
     public static void main(String[] args) {
